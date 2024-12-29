@@ -1,0 +1,19 @@
+{
+    "schemaName": "d365ce",
+    "dataSource": "[ExternalConnection_DynamicsCE_ADL]",
+    "fileFormat": "[ParquetFileFormat]",
+    "locationPrefix": "deltalake",
+    "outputDirectory": "C:\\Users\\BPeri\\Downloads",
+    "tableScriptPrefix": "ext_",
+    "tableScriptSuffix": "_table",
+    "viewScriptPrefix": "",
+    "viewScriptSuffix": "",
+    "combinedExternalTableScriptName": "all_external_tables.sql",
+    "combinedViewScriptName": "all_views.sql",
+    "allScriptsInOne": false,
+    "excelFilePath": "C:\\Users\\BPeri\\Downloads\\CandR_SchemaExport.xlsx",
+    "parquetFilePath": "C:\\Users\\BPeri\\Downloads\\ParquetMetadata.xlsx",
+    "tables": [
+			{"tableName": "transactioncurrency"}
+    ]
+}

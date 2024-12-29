@@ -1,0 +1,120 @@
+2024-12-27 13:46:21,391 - ERROR - Error in extractParquetDataType for row Entity Display Name                                           Organisation
+Entity Logical Name                                                account
+Logical Name                                           accountcategorycode
+Schema Name                                            AccountCategoryCode
+Display Name                                                      Category
+Attribute Type                                                      Choice
+Description              Select a category to indicate whether the cust...
+Custom Attribute                                                     False
+Type                                                                Simple
+Required Level                                                         NaN
+ValidFor AdvancedFind                                                 True
+Audit Enabled                                                         True
+Secured                                                              False
+Form location                              Information/Details/Description
+Additional data          Options:_x000D_\n1: Preferred Customer_x000D_\...
+Derived Data Type                                                  INTEGER
+Size                                                                   NaN
+Precision                                                              NaN
+Name: 0, dtype: object: 'Parquet Table Name'
+2024-12-27 13:46:21,391 - ERROR - Error in writeScripts: 'Parquet Table Name'
+2024-12-27 13:46:21,391 - CRITICAL - Critical error in main: 'Parquet Table Name'
+2024-12-27 13:50:14,990 - ERROR - Error in extractParquetDataType for row Entity Display Name                                           Organisation
+Entity Logical Name                                                account
+Logical Name                                           accountcategorycode
+Schema Name                                            AccountCategoryCode
+Display Name                                                      Category
+Attribute Type                                                      Choice
+Description              Select a category to indicate whether the cust...
+Custom Attribute                                                     False
+Type                                                                Simple
+Required Level                                                         NaN
+ValidFor AdvancedFind                                                 True
+Audit Enabled                                                         True
+Secured                                                              False
+Form location                              Information/Details/Description
+Additional data          Options:_x000D_\n1: Preferred Customer_x000D_\...
+Derived Data Type                                                  INTEGER
+Size                                                                   NaN
+Precision                                                              NaN
+Name: 0, dtype: object: 'Parquet Table Name'
+2024-12-27 13:50:14,991 - ERROR - Error in writeScripts: 'Parquet Table Name'
+2024-12-27 13:50:14,992 - CRITICAL - Critical error in main: 'Parquet Table Name'
+2024-12-27 13:55:41,451 - ERROR - Error in extractParquetDataType for row Entity Display Name                                           Organisation
+Entity Logical Name                                                account
+Logical Name                                           accountcategorycode
+Schema Name                                            AccountCategoryCode
+Display Name                                                      Category
+Attribute Type                                                      Choice
+Description              Select a category to indicate whether the cust...
+Custom Attribute                                                     False
+Type                                                                Simple
+Required Level                                                         NaN
+ValidFor AdvancedFind                                                 True
+Audit Enabled                                                         True
+Secured                                                              False
+Form location                              Information/Details/Description
+Additional data          Options:_x000D_\n1: Preferred Customer_x000D_\...
+Derived Data Type                                                  INTEGER
+Size                                                                   NaN
+Precision                                                              NaN
+Name: 0, dtype: object: 'Parquet Table Name'
+2024-12-27 13:55:41,451 - ERROR - Error in writeScripts: 'Parquet Table Name'
+2024-12-27 13:55:41,451 - CRITICAL - Critical error in main: 'Parquet Table Name'
+2024-12-27 14:18:34,096 - ERROR - Error in extractDataType for row Entity Display Name                                           Organisation
+Entity Logical Name                                                account
+Logical Name                                           accountcategorycode
+Schema Name                                            AccountCategoryCode
+Display Name                                                      Category
+Attribute Type                                                      Choice
+Description              Select a category to indicate whether the cust...
+Custom Attribute                                                     False
+Type                                                                Simple
+Required Level                                                         NaN
+ValidFor AdvancedFind                                                 True
+Audit Enabled                                                         True
+Secured                                                              False
+Form location                              Information/Details/Description
+Additional data          Options:_x000D_\n1: Preferred Customer_x000D_\...
+Parquet Data Type                                                      NaN
+Name: 0, dtype: object: 'float' object has no attribute 'upper'
+2024-12-27 14:18:34,096 - ERROR - Error in writeScripts: 'float' object has no attribute 'upper'
+2024-12-27 14:18:34,097 - CRITICAL - Critical error in main: 'float' object has no attribute 'upper'
+2024-12-27 14:24:38,610 - ERROR - Error in extractDataType for row Entity Display Name                                           Organisation
+Entity Logical Name                                                account
+Logical Name                                           accountcategorycode
+Schema Name                                            AccountCategoryCode
+Display Name                                                      Category
+Attribute Type                                                      Choice
+Description              Select a category to indicate whether the cust...
+Custom Attribute                                                     False
+Type                                                                Simple
+Required Level                                                         NaN
+ValidFor AdvancedFind                                                 True
+Audit Enabled                                                         True
+Secured                                                              False
+Form location                              Information/Details/Description
+Additional data          Options:_x000D_\n1: Preferred Customer_x000D_\...
+Parquet Data Type                                                      NaN
+Name: 0, dtype: object: 'float' object has no attribute 'str'
+2024-12-27 14:24:38,611 - ERROR - Error in writeScripts: 'float' object has no attribute 'str'
+2024-12-27 14:24:38,611 - CRITICAL - Critical error in main: 'float' object has no attribute 'str'
+2024-12-27 14:24:50,230 - ERROR - Error in extractDataType for row Entity Display Name                                           Organisation
+Entity Logical Name                                                account
+Logical Name                                           accountcategorycode
+Schema Name                                            AccountCategoryCode
+Display Name                                                      Category
+Attribute Type                                                      Choice
+Description              Select a category to indicate whether the cust...
+Custom Attribute                                                     False
+Type                                                                Simple
+Required Level                                                         NaN
+ValidFor AdvancedFind                                                 True
+Audit Enabled                                                         True
+Secured                                                              False
+Form location                              Information/Details/Description
+Additional data          Options:_x000D_\n1: Preferred Customer_x000D_\...
+Parquet Data Type                                                      NaN
+Name: 0, dtype: object: 'in <string>' requires string as left operand, not float
+2024-12-27 14:24:50,230 - ERROR - Error in writeScripts: 'in <string>' requires string as left operand, not float
+2024-12-27 14:24:50,230 - CRITICAL - Critical error in main: 'in <string>' requires string as left operand, not float
