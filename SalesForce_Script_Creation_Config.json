@@ -3,17 +3,27 @@
     "dataSource": "[ExternalConnection_DynamicsCE_ADL]",
     "fileFormat": "[ParquetFileFormat]",
     "locationPrefix": "deltalake",
-    "outputDirectory": "C:\\Users\\BPeri\\Downloads",
-    "tableScriptPrefix": "ext_",
-    "tableScriptSuffix": "_table",
+    "outputDirectory": "C:\\Users\\BPeri\\Downloads\\auto_scripts",
+    "tableScriptPrefix": "",
+    "tableScriptSuffix": "_raw",
     "viewScriptPrefix": "",
     "viewScriptSuffix": "",
     "combinedExternalTableScriptName": "all_external_tables.sql",
     "combinedViewScriptName": "all_views.sql",
-    "allScriptsInOne": false,
+    "allScriptsInOne": true,
     "excelFilePath": "C:\\Users\\BPeri\\Downloads\\CandR_SchemaExport.xlsx",
     "parquetFilePath": "C:\\Users\\BPeri\\Downloads\\ParquetMetadata.xlsx",
+    "exceptionFilePath": "C:\\Users\\BPeri\\Downloads\\ExceptionReport.xlsx",
     "tables": [
-			{"tableName": "transactioncurrency"}
+                {"tableName": "account"},
+                {"tableName": "systemuser"},
+                {"tableName": "team"},
+                {"tableName": "ukef_claim"},
+                {"tableName": "ukef_claimhistory"},
+                {"tableName": "ukef_claimpartybalance"},
+                {"tableName": "ukef_claimpayment"},
+                {"tableName": "ukef_cnumber"},
+                {"tableName": "ukef_country"},
+                {"tableName": "ukef_deal"}
     ]
 }

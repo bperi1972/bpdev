@@ -273,11 +273,11 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
             else:
                 externalTableFileName = os.path.join(
                     output_directory,
-                    f"{config['tableScriptPrefix']}{tableName}{config['tableScriptSuffix']}_external_table.sql"
+                    f"{config['tableScriptPrefix']}{tableName}{config['tableScriptSuffix']}.sql"
                 )
                 viewFileName = os.path.join(
                     output_directory,
-                    f"{config['viewScriptPrefix']}{tableName}{config['viewScriptSuffix']}_view.sql"
+                    f"{config['viewScriptPrefix']}{tableName}{config['viewScriptSuffix']}.sql"
                 )
 
                 with open(externalTableFileName, "w") as tableFile:
@@ -316,6 +316,8 @@ def extractDataType(row):
             data_type = 'INTEGER'
         elif str(parquet_column_data_type).upper() in ('VARCHAR(8000)'):
             data_type = 'VARCHAR(100)'
+        elif str(parquet_column_data_type).upper() in ('FLOAT') or column_type in ["Double"]:
+            data_type = 'FLOAT'            
         elif column_type in ["BigInt", "Choice", "State", "Status", "ManagedProperty", "Two Options", "Whole number"]:
             data_type = "INTEGER"
         elif column_type == "Currency":
@@ -323,7 +325,7 @@ def extractDataType(row):
             if match:
                 precision = int(match.group(1))
             data_type = f"DECIMAL(38,{precision})"
-        elif column_type in ["Decimal", "Double"]:
+        elif column_type in ["Decimal"]:
             match = re.search(r"Precision:\s*(\d+)", additional_data)
             if match:
                 precision = int(match.group(1))
