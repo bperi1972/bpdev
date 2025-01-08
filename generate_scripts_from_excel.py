@@ -232,9 +232,12 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
         os.makedirs(output_directory, exist_ok=True)
 
         # Populate the Metadata from the Sales Force Excel File
-        df = pd.read_excel(excelFilePath, sheet_name='Metadata')
+        df_excel = pd.read_excel(excelFilePath, sheet_name='Metadata')
+
+        df = df_excel.loc[df_excel['Attribute Type'] != 'Virtual']
         df_parquet = pd.read_excel(parquetFilePath, sheet_name='Parquet_Metadata')
-        df = pd.merge(df, df_parquet[["Entity Logical Name", "Logical Name", "Parquet Data Type"]], on=["Entity Logical Name", "Logical Name"], how='left')
+        df = pd.merge(df, df_parquet[["Entity Logical Name", "Logical Name", "Parquet Data Type"]], on=["Entity Logical Name", "Logical Name"], how='right')
+        df_default_col_n_types = pd.read_excel(parquetFilePath, sheet_name='Default Metadata Cols with Type')
 
         df[["Derived Data Type", "Size", "Precision"]] = df.apply(extractDataType, axis=1)
         # df[["Parquet Data Type"]] = df.apply(extractParquetDataType, axis=1)
@@ -312,13 +315,38 @@ def extractDataType(row):
         size = None
         precision = None
 
-        if str(parquet_column_data_type) in ('bit', 'bigint'):
+        """ 
+        BigInt - maps to bigint
+        Choice - integer as it's an enumeration field - as per example provided.
+            Currency - numeric
+        Customer - lookup to a unique identifier - varchar(50)
+        DateTime - varchar(50)
+        Decimal - numeric
+        Double - numeric
+        EntityName  - varchar(50) - as per example provided.
+        Lookup - varchar(50) - as per example provided.
+        ManagedProperty - not on an entity of interest
+            Multiline Text - nvarchar inline with metadata setting
+        Owner - varchar(50) - as per example provided.
+        PartyList - not on an entity of interest
+        State - integer - as per example provided.
+        Status- integer - as per example provided.
+            Text - nvarchar inline with metadata setting.
+        Two options - varchar(5)
+        Uniqueidentifier - varchar(50)
+        Virtual - ignore as per earlier email
+        Whole number - integer 
+        """
+
+        if str(parquet_column_data_type) in ('bit'):
             data_type = 'INTEGER'
-        elif str(parquet_column_data_type).upper() in ('VARCHAR(8000)'):
+        elif column_type in ('BigInt', 'bigint'):
+            data_type = "BIGINT"            
+        elif str(parquet_column_data_type).upper() in ('VARCHAR(8000)') and column_type not in ["Uniqueidentifier", "DateTime", "Text", "Multiline Text"]:
             data_type = 'VARCHAR(100)'
         elif str(parquet_column_data_type).upper() in ('FLOAT') or column_type in ["Double"]:
             data_type = 'FLOAT'            
-        elif column_type in ["BigInt", "Choice", "State", "Status", "ManagedProperty", "Two Options", "Whole number"]:
+        elif column_type in ["Choice", "State", "Status", "ManagedProperty", "Whole number"]:
             data_type = "INTEGER"
         elif column_type == "Currency":
             match = re.search(r"Precision:\s*(\d+)", additional_data)
@@ -329,7 +357,7 @@ def extractDataType(row):
             match = re.search(r"Precision:\s*(\d+)", additional_data)
             if match:
                 precision = int(match.group(1))
-            data_type = f"DECIMAL(38,2)"
+            data_type = f"DECIMAL(38,{precision})"
         elif column_type in ["Customer", "EntityName", "Lookup", "Owner", "Uniqueidentifier", "DateTime"]:
             data_type = "VARCHAR(50)"
         elif column_type == "Multiline Text":
@@ -339,14 +367,16 @@ def extractDataType(row):
             if size > 8000:
                 data_type = "VARCHAR(MAX)"
             else:
-                data_type = f"VARCHAR({size})" if size else "VARCHAR"
+                data_type = f"NVARCHAR({size})" if size else "VARCHAR(50)"
         elif column_type == "PartyList":
-            data_type = "VARCHAR(100)"
+            data_type = "VARCHAR(100)"                
+        elif column_type == "Two Options":
+            data_type = "VARCHAR(5)"
         elif column_type == "Text":
             match = re.search(r"Max length:\s*(\d+)", additional_data)
             if match:
                 size = int(match.group(1))
-            data_type = f"VARCHAR({size})" if size else "VARCHAR(50)"
+            data_type = f"NVARCHAR({size})" if size else "VARCHAR(50)"
         elif column_type == "Virtual":
             data_type = "VARCHAR(50)"
         else:
