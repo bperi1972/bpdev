@@ -136,7 +136,7 @@ def defaultMetadataToExclusionList():
         logging.error(f"Error while populating the defaultMetadataExlusionList")
     return exclusion_list
 
-def populateEntityColumnList(df, entityName, parquetMetadata, defaultMetadata):
+def populateEntityColumnList(df, entityName, parquetMetadata, defaultMetadata, df_default_col_n_types, df_parquet):
     try:
         filtered_df = df[df['Entity Logical Name'] == entityName]
         specificColumnsList = [
@@ -147,10 +147,29 @@ def populateEntityColumnList(df, entityName, parquetMetadata, defaultMetadata):
     except Exception as e:
         logging.error(f"Error in populateEntityColumnList for entity {entityName}: {e}")
 
+def populateEntityApplicableDefaultColumnList(df, entityName, df_default_col_n_types, df_parquet):
+    try:
+        filtered_df = df_parquet[df_parquet['Entity Logical Name'] == entityName][['Logical Name']]
+        # Merge using the Logical Name from the Default Metadata Columns
+        #print(filtered_df);
+        merged_df = pd.merge(df_default_col_n_types[["Logical Name", "Default Data Type"]], filtered_df, on="Logical Name", how='left', indicator= True)
+        print(merged_df);
+        merged_filtered_df = merged_df[merged_df['_merge'] == 'both']
+        applicableDefaultColumnList = [
+            f"{row['Logical Name']} {row['Default Data Type']}"
+            for _, row in merged_filtered_df.iterrows()
+        ]
+        print(f"The columns in the list are {applicableDefaultColumnList}")
+        return applicableDefaultColumnList
+    except Exception as e:
+        logging.error(f"Error in populateEntityColumnList for entity {entityName}: {e}")
+
+populateEntityApplicableDefaultColumnList
 
 def createExternalTable(
     tableName,
     specificColumnsList=None,
+    defaultColumnList=None,
     schemaName=None,
     dataSource=None,
     fileFormat=None,
@@ -164,12 +183,17 @@ def createExternalTable(
         parquet_file_location = f"{locationPrefix}/{tableName}_partitioned/PartitionId=*/*.snappy.parquet"
 
         parquetMetadata = addParquetCreationMetadata()
-        defaultMetadata = addDefaultMetadata()
+        #defaultMetadata = addDefaultMetadata()
 
         if specificColumnsList:
             formattedSpecificColumns = ',\n\t\t'.join(specificColumnsList)
         else:
             formattedSpecificColumns = ''
+
+        if defaultColumnList:
+            formattedDefaultColumns = ',\n\t\t'.join(defaultColumnList)
+        else:
+            formattedDefaultColumns = ''
 
         query = f"""
 CREATE EXTERNAL TABLE {schemaName}.[{tableName}_raw] 
@@ -181,7 +205,7 @@ CREATE EXTERNAL TABLE {schemaName}.[{tableName}_raw]
 \t\t/** Data **/
 \t\t/** Default Metadata **/
 
-\t\t{defaultMetadata},
+\t\t{formattedDefaultColumns},
 
 \t\t/** Entity Specific Metadata **/
 
@@ -197,7 +221,6 @@ WITH (
 
 GO
 """
-
         return query
     except Exception as e:
         logging.error(f"Error in createExternalTable for table {tableName}: {e}")
@@ -240,7 +263,6 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
         df_default_col_n_types = pd.read_excel(parquetFilePath, sheet_name='Default Metadata Cols with Type')
 
         df[["Derived Data Type", "Size", "Precision"]] = df.apply(extractDataType, axis=1)
-        # df[["Parquet Data Type"]] = df.apply(extractParquetDataType, axis=1)
 
         parquetMetadata = addParquetCreationMetadata()
         defaultMetadata = addDefaultMetadata()
@@ -254,11 +276,12 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
 
         for table in config["tables"]:
             tableName = table["tableName"]
-            specificColumnsList = populateEntityColumnList(df, tableName, parquetMetadata, defaultMetadata)
-
+            specificColumnsList = populateEntityColumnList(df, tableName, parquetMetadata, defaultMetadata, df_default_col_n_types, df_parquet)
+            defaultColumnList = populateEntityApplicableDefaultColumnList(df, tableName, df_default_col_n_types, df_parquet)
             externalTableScript = createExternalTable(
                 tableName=tableName,
                 specificColumnsList=specificColumnsList,
+                defaultColumnList=defaultColumnList,
                 schemaName=config["schemaName"],
                 dataSource=config["dataSource"],
                 fileFormat=config["fileFormat"],
@@ -376,12 +399,12 @@ def extractDataType(row):
             match = re.search(r"Max length:\s*(\d+)", additional_data)
             if match:
                 size = int(match.group(1))
-            data_type = f"NVARCHAR({size})" if size else "VARCHAR(50)"
+            data_type = f"NVARCHAR({size})" if size else "NVARCHAR(50)"
         elif column_type == "Virtual":
             data_type = "VARCHAR(50)"
         else:
             data_type = "VARCHAR(50)"
-        print(f"The column name is {column_name} and the column_type is {data_type} and the size is {size} and parquet data type is {parquet_column_data_type}")
+        # print(f"The column name is {column_name} and the column_type is {data_type} and the size is {size} and parquet data type is {parquet_column_data_type}")
         return pd.Series([data_type, size, precision])
     except Exception as e:
         logging.error(f"Error in extractDataType for row {row}: {e}")
