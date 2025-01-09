@@ -143,41 +143,44 @@ def populateEntityColumnList(df, entityName, parquetMetadata, defaultMetadata, d
             f"{row['Logical Name']} {row['Derived Data Type']}"
             for _, row in filtered_df.iterrows()
         ]
+        #print(f"The columns in the Entity list are {specificColumnsList}")
         return specificColumnsList
     except Exception as e:
         logging.error(f"Error in populateEntityColumnList for entity {entityName}: {e}")
 
-def populateEntityApplicableDefaultColumnList(df, entityName, df_default_col_n_types, df_parquet):
+def populateNonSynapseDefaultColumnList(df, entityName, df_default_col_n_types, df_parquet):
     try:
         filtered_df = df_parquet[df_parquet['Entity Logical Name'] == entityName][['Logical Name']]
-        # Merge using the Logical Name from the Default Metadata Columns
-        #print(filtered_df);
         merged_df = pd.merge(df_default_col_n_types[["Logical Name", "Default Data Type"]], filtered_df, on="Logical Name", how='left', indicator= True)
-        print(merged_df);
         merged_filtered_df = merged_df[merged_df['_merge'] == 'both']
         applicableDefaultColumnList = [
             f"{row['Logical Name']} {row['Default Data Type']}"
             for _, row in merged_filtered_df.iterrows()
         ]
-        print(f"The columns in the list are {applicableDefaultColumnList}")
         return applicableDefaultColumnList
     except Exception as e:
-        logging.error(f"Error in populateEntityColumnList for entity {entityName}: {e}")
+        logging.error(f"Error in populateNonSynapseDefaultColumnList for entity {entityName}: {e}")
 
-populateEntityApplicableDefaultColumnList
+
+def populateSynapseDefaultColumnList(df):
+    try:
+        SynapseDefaultColumnList = [
+            f"{row['Logical Name']} {row['Default Data Type']}"
+            for _, row in df.iterrows()
+        ]
+        return SynapseDefaultColumnList
+    except Exception as e:
+        logging.error(f"Error in SynapseDefaultColumnList generation")
 
 def createExternalTable(
     tableName,
     specificColumnsList=None,
-    defaultColumnList=None,
+    nonSynapseDefaultColumnList=None,
+    synapseDefaultColumnList=None,
     schemaName=None,
     dataSource=None,
     fileFormat=None,
     locationPrefix=None
-    # schemaName="d365",
-    # dataSource="ExternalConnection_DynamicsCE_ADL",
-    # fileFormat="ParquetFileFormat",
-    # locationPrefix="deltalake"
 ):
     try:
         parquet_file_location = f"{locationPrefix}/{tableName}_partitioned/PartitionId=*/*.snappy.parquet"
@@ -190,22 +193,28 @@ def createExternalTable(
         else:
             formattedSpecificColumns = ''
 
-        if defaultColumnList:
-            formattedDefaultColumns = ',\n\t\t'.join(defaultColumnList)
+        if synapseDefaultColumnList:
+            formattedSynapseDefaultColumnList = ',\n\t\t'.join(synapseDefaultColumnList)
         else:
-            formattedDefaultColumns = ''
+            formattedSynapseDefaultColumnList = ''
+
+        if nonSynapseDefaultColumnList:
+            formattedNonSynapseDefaultColumnList = ',\n\t\t'.join(nonSynapseDefaultColumnList)
+        else:
+            formattedNonSynapseDefaultColumnList = ''
+        
 
         query = f"""
 CREATE EXTERNAL TABLE {schemaName}.[{tableName}_raw] 
 (
 \t\t/** Parquet Creation Metadata **/
 
-\t\t{parquetMetadata},
+\t\t{formattedSynapseDefaultColumnList},
 
 \t\t/** Data **/
 \t\t/** Default Metadata **/
 
-\t\t{formattedDefaultColumns},
+\t\t{formattedNonSynapseDefaultColumnList},
 
 \t\t/** Entity Specific Metadata **/
 
@@ -226,15 +235,26 @@ GO
         logging.error(f"Error in createExternalTable for table {tableName}: {e}")
         raise
 
-def createViewOnExternalTable(tableName, schemaName="d365"):
+def createViewOnExternalTable(tableName, allColumnsList, schemaName="d365"):
     try:
+        allColumns = [column.split()[0] for column in allColumnsList]
+        if allColumns:
+            formattedAllColumns = ',\n\t\t'.join(allColumns)
+            formattedAllColumnInner  = ',\n\t\t\t\t'.join(allColumns)
+        else:
+            formattedAllColumns = ''
+            formattedAllColumnsInner = ''
+        
+        print(f"All columns selected are {formattedAllColumns}")
         query = f"""
 CREATE VIEW {schemaName}.{tableName} 
 AS
-SELECT * 
+SELECT 
+\t\t{formattedAllColumns} 
   FROM 
     (
-        SELECT *, ROW_NUMBER() OVER (PARTITION BY Id ORDER BY versionnumber DESC) as _row_id
+        SELECT  {formattedAllColumnInner},
+\t\t\t\tROW_NUMBER() OVER (PARTITION BY Id ORDER BY versionnumber DESC) as _row_id
           FROM {schemaName}.[{tableName}_raw]
     ) AS A
  WHERE A._row_id = 1
@@ -247,7 +267,11 @@ GO
         logging.error(f"Error in createViewOnExternalTable for table {tableName}: {e}")
         raise
 
-def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
+def writeScripts(config, 
+                 DynamicsCEExcelFilePath, DynamicsCEMetadataSheetName,
+                 ParquetExcelFilePath, ParquetMetadataSheetName,
+                 DefaultMetadataExcelFilePath, SynapseDefaultMetadataSheetName, NonSynapseDefaultMetadataSheetName,
+                 allScriptsInOne=False):
     try:
         output_directory = config.get("outputDirectory", "./")
 
@@ -255,13 +279,13 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
         os.makedirs(output_directory, exist_ok=True)
 
         # Populate the Metadata from the Sales Force Excel File
-        df_excel = pd.read_excel(excelFilePath, sheet_name='Metadata')
+        df_excel = pd.read_excel(DynamicsCEExcelFilePath, sheet_name=DynamicsCEMetadataSheetName)
 
         df = df_excel.loc[df_excel['Attribute Type'] != 'Virtual']
-        df_parquet = pd.read_excel(parquetFilePath, sheet_name='Parquet_Metadata')
+        df_parquet = pd.read_excel(ParquetExcelFilePath, sheet_name=ParquetMetadataSheetName)
         df = pd.merge(df, df_parquet[["Entity Logical Name", "Logical Name", "Parquet Data Type"]], on=["Entity Logical Name", "Logical Name"], how='right')
-        df_default_col_n_types = pd.read_excel(parquetFilePath, sheet_name='Default Metadata Cols with Type')
-
+        df_non_synapse_default_col_n_types = pd.read_excel(DefaultMetadataExcelFilePath, sheet_name=NonSynapseDefaultMetadataSheetName)
+        df_synapse_default_col_n_types = pd.read_excel(DefaultMetadataExcelFilePath, sheet_name=SynapseDefaultMetadataSheetName)
         df[["Derived Data Type", "Size", "Precision"]] = df.apply(extractDataType, axis=1)
 
         parquetMetadata = addParquetCreationMetadata()
@@ -276,12 +300,15 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
 
         for table in config["tables"]:
             tableName = table["tableName"]
-            specificColumnsList = populateEntityColumnList(df, tableName, parquetMetadata, defaultMetadata, df_default_col_n_types, df_parquet)
-            defaultColumnList = populateEntityApplicableDefaultColumnList(df, tableName, df_default_col_n_types, df_parquet)
+            specificColumnsList = populateEntityColumnList(df, tableName, parquetMetadata, defaultMetadata, df_non_synapse_default_col_n_types, df_parquet)
+            nonSynapseDefaultColumnList = populateNonSynapseDefaultColumnList(df, tableName, df_non_synapse_default_col_n_types, df_parquet)
+            synapseDefaultColumnList = populateSynapseDefaultColumnList(df_synapse_default_col_n_types)
+            allColumnsList = synapseDefaultColumnList + nonSynapseDefaultColumnList + specificColumnsList
             externalTableScript = createExternalTable(
                 tableName=tableName,
                 specificColumnsList=specificColumnsList,
-                defaultColumnList=defaultColumnList,
+                nonSynapseDefaultColumnList=nonSynapseDefaultColumnList,
+                synapseDefaultColumnList=synapseDefaultColumnList,
                 schemaName=config["schemaName"],
                 dataSource=config["dataSource"],
                 fileFormat=config["fileFormat"],
@@ -290,6 +317,7 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
 
             viewScript = createViewOnExternalTable(
                 tableName=tableName,
+                allColumnsList=allColumnsList,
                 schemaName=config["schemaName"]
             )
 
@@ -327,39 +355,13 @@ def writeScripts(config, excelFilePath, parquetFilePath, allScriptsInOne=False):
 
 def extractDataType(row):
     try:
-        table_name = row["Entity Logical Name"]
-        column_name = row["Logical Name"]
         column_type = row["Attribute Type"]
         parquet_column_data_type = row["Parquet Data Type"]
         additional_data = str(row["Additional data"])
-        # print(f"The column name is {column_name} and the column_type is {column_type} and the additional data is {additional_data} and parquet data type is {parquet_column_data_type}")
 
         data_type = None
         size = None
         precision = None
-
-        """ 
-        BigInt - maps to bigint
-        Choice - integer as it's an enumeration field - as per example provided.
-            Currency - numeric
-        Customer - lookup to a unique identifier - varchar(50)
-        DateTime - varchar(50)
-        Decimal - numeric
-        Double - numeric
-        EntityName  - varchar(50) - as per example provided.
-        Lookup - varchar(50) - as per example provided.
-        ManagedProperty - not on an entity of interest
-            Multiline Text - nvarchar inline with metadata setting
-        Owner - varchar(50) - as per example provided.
-        PartyList - not on an entity of interest
-        State - integer - as per example provided.
-        Status- integer - as per example provided.
-            Text - nvarchar inline with metadata setting.
-        Two options - varchar(5)
-        Uniqueidentifier - varchar(50)
-        Virtual - ignore as per earlier email
-        Whole number - integer 
-        """
 
         if str(parquet_column_data_type) in ('bit'):
             data_type = 'INTEGER'
@@ -404,7 +406,7 @@ def extractDataType(row):
             data_type = "VARCHAR(50)"
         else:
             data_type = "VARCHAR(50)"
-        # print(f"The column name is {column_name} and the column_type is {data_type} and the size is {size} and parquet data type is {parquet_column_data_type}")
+        
         return pd.Series([data_type, size, precision])
     except Exception as e:
         logging.error(f"Error in extractDataType for row {row}: {e}")
@@ -416,7 +418,15 @@ def main():
         with open(r'C:\Users\BPeri\Downloads\gitcode\bpdev\SalesForce_Script_Creation_Config.json', "r") as configFile:
             config = json.load(configFile)
 
-        writeScripts(config, excelFilePath=config["excelFilePath"], parquetFilePath=config["parquetFilePath"], allScriptsInOne=config.get("allScriptsInOne", False))
+        writeScripts(config, 
+                     DynamicsCEExcelFilePath=config["DynamicsCEExcelFilePath"],
+                     DynamicsCEMetadataSheetName=config["DynamicsCEMetadataSheetName"], 
+                     ParquetExcelFilePath=config["ParquetExcelFilePath"], 
+                     ParquetMetadataSheetName=config["ParquetMetadataSheetName"], 
+                     DefaultMetadataExcelFilePath=config["DefaultMetadataExcelFilePath"], 
+                     SynapseDefaultMetadataSheetName=config["SynapseDefaultMetadataSheetName"], 
+                     NonSynapseDefaultMetadataSheetName=config["NonSynapseDefaultMetadataSheetName"], 
+                     allScriptsInOne=config.get("allScriptsInOne", False))
     except Exception as e:
         logging.critical(f"Critical error in main: {e}")
         raise
